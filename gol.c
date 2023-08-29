@@ -4,9 +4,11 @@
 
 #define WIDTH 65
 #define HEIGHT 38
-#define CHAR '#'
 
-#define ARR_LEN(arr) (sizeof(arr)/sizeof(arr[0]))
+#ifndef CHAR
+#define CHAR '#'
+#endif //CHAR
+
 #define PLACE(buffer, x, y) (buffer[(y) * WIDTH + (x)] = ALIVE)
 
 typedef enum {
@@ -74,7 +76,7 @@ void init_grid() {
     PLACE(first_buffer, 36, 4);
 }
 
-void check_neighbors(u32 index, CellState* current_buffer, u8* number_dead, u8* number_alive) {
+void check_neighbors(u32 index, CellState* current_buffer, u8* number_alive) {
     for (u8 row = 0; row < 3; ++row) {
         for (u8 col = 0; col < 3; ++col) {
             i32 neighborhood_index = index - WIDTH - 1 + row * WIDTH + col;
@@ -87,8 +89,6 @@ void check_neighbors(u32 index, CellState* current_buffer, u8* number_dead, u8* 
             
             if (neighbor) {
                 (*number_alive)++;
-            } else{
-                (*number_dead)++;
             }
         }
     }
@@ -100,10 +100,9 @@ void calc_next_gen(CellState* current_buffer, CellState* write_buffer) {
             u32 index = y * WIDTH + x;
             CellState cell = current_buffer[index]; 
 
-            u8 number_dead  = 0;
             u8 number_alive = 0;
 
-            check_neighbors(index, current_buffer, &number_dead, &number_alive);
+            check_neighbors(index, current_buffer, &number_alive);
 
             if (cell == ALIVE && (number_alive == 2 || number_alive == 3)) {
                 write_buffer[index] = ALIVE;
@@ -183,7 +182,7 @@ int main(void) {
         write_buffer = buffers[!buf_num];
 
         system("clear");
-        render_buffer(current_buffer, CHAR, PRETTY);
+        render_buffer(current_buffer, CHAR, BASIC);
     }
 
 }
