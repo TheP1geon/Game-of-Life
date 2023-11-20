@@ -9,20 +9,24 @@
 #define CHAR '#'
 #endif //CHAR
 
-#define PLACE(buffer, x, y) (buffer[(y) * WIDTH + (x)] = ALIVE)
+#define PLACE(buffer, x, y) (buffer[(y) * WIDTH + (x)].state = ALIVE)
 
 typedef enum {
     DEAD,
     ALIVE,
 } CellState;
 
+typedef struct {
+    CellState state;
+} Cell;
+
 typedef enum {
     BASIC,
     PRETTY,
 } RenderMode;
 
-static CellState first_buffer[WIDTH * HEIGHT] = {};
-static CellState second_buffer[WIDTH * HEIGHT] = {};
+static Cell first_buffer[WIDTH * HEIGHT] = {};
+static Cell second_buffer[WIDTH * HEIGHT] = {};
 
 void init_grid() {
     PLACE(first_buffer, 1, 5);
@@ -76,7 +80,9 @@ void init_grid() {
     PLACE(first_buffer, 36, 4);
 }
 
-void check_neighbors(u32 index, CellState* current_buffer, u8* number_alive) {
+u8 check_neighbors(u32 index, Cell* current_buffer) {
+    u8 number_alive = 0;
+
     for (u8 row = 0; row < 3; ++row) {
         for (u8 col = 0; col < 3; ++col) {
             i32 neighborhood_index = index - WIDTH - 1 + row * WIDTH + col;
@@ -85,37 +91,37 @@ void check_neighbors(u32 index, CellState* current_buffer, u8* number_alive) {
 
             if (neighborhood_index == (i32)index) continue; // skip the middle cell
     
-            CellState neighbor = current_buffer[neighborhood_index];
+            Cell neighbor = current_buffer[neighborhood_index];
             
-            if (neighbor) {
-                (*number_alive)++;
+            if (neighbor.state == ALIVE) {
+                number_alive++;
             }
         }
     }
+
+    return number_alive;
 }
 
-void calc_next_gen(CellState* current_buffer, CellState* write_buffer) {
+void calc_next_gen(Cell* current_buffer, Cell* write_buffer) {
     for (u32 y = 0; y < HEIGHT; ++y) {
         for (u32 x = 0; x < WIDTH; ++x) {
             u32 index = y * WIDTH + x;
-            CellState cell = current_buffer[index]; 
+            Cell cell = current_buffer[index]; 
 
-            u8 number_alive = 0;
+            u8 number_alive = check_neighbors(index, current_buffer);
 
-            check_neighbors(index, current_buffer, &number_alive);
-
-            if (cell == ALIVE && (number_alive == 2 || number_alive == 3)) {
-                write_buffer[index] = ALIVE;
-            } else if (cell == DEAD && number_alive == 3) {
-                write_buffer[index] = ALIVE;
+            if (cell.state == ALIVE && (number_alive == 2 || number_alive == 3)) {
+                write_buffer[index].state = ALIVE;
+            } else if (cell.state == DEAD && number_alive == 3) {
+                write_buffer[index].state = ALIVE;
             } else {
-                write_buffer[index] = DEAD;
+                write_buffer[index].state = DEAD;
             }
         }
     }
 }
 
-void render_buffer(CellState* current_buffer, u8 character, RenderMode mode) {
+void render_buffer(Cell* current_buffer, u8 character, RenderMode mode) {
     if (mode == PRETTY) {
         printf("+ ");
         for (u32 i = 0; i < WIDTH; ++i) {
@@ -127,7 +133,7 @@ void render_buffer(CellState* current_buffer, u8 character, RenderMode mode) {
     for (u32 y = 0; y < HEIGHT; ++y) {
         for (u32 x = 0; x < WIDTH; ++x) {
             u32 index = y * WIDTH + x;
-            CellState cell = current_buffer[index];
+            Cell cell = current_buffer[index];
             
             if (mode == PRETTY) {
                 if (x == 0) {
@@ -135,7 +141,7 @@ void render_buffer(CellState* current_buffer, u8 character, RenderMode mode) {
                 }
             }
 
-            if (cell) {
+            if (cell.state == ALIVE) {
                 printf("%c ", character);
             } else {
                 printf(". ");
@@ -163,14 +169,14 @@ void render_buffer(CellState* current_buffer, u8 character, RenderMode mode) {
 }
 
 void sleep(i32 milliseconds) {
-    for (i32 i = 0; i < milliseconds * 10000; ++i) {}
+    for (i32 i = 0; i < milliseconds * 100000; ++i) {}
 }
 
 int main(void) {
     init_grid();
-    CellState* buffers[2] = {first_buffer, second_buffer};
-    CellState* current_buffer = buffers[0];
-    CellState* write_buffer = buffers[1];
+    Cell* buffers[2] = {first_buffer, second_buffer};
+    Cell* current_buffer = buffers[0];
+    Cell* write_buffer = buffers[1];
     
     for (i32 i = 0; i >= 0; ++i) {
         u8 buf_num = i%2; // either 0 or 1
